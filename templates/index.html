@@ -7,11 +7,37 @@
 </head>
 <body>
   <div class="app">
-    <h1>Cookie Clicker</h1>
-    <div class="score">
-      Клики: <span id="score">{{ score }}</span>
+    <h1>🍪 Cookie Clicker 🍪</h1>
+    
+    <!-- Statistics Panel -->
+    <div class="stats-panel">
+      <div class="stat-item">
+        <div class="stat-label">Клики</div>
+        <div class="stat-value" id="score">{{ score }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Лучший результат</div>
+        <div class="stat-value" id="best-score">{{ score }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Кликов/сек</div>
+        <div class="stat-value" id="cps">0.0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Время игры</div>
+        <div class="stat-value" id="session-time">0с</div>
+      </div>
     </div>
-    <button id="click-btn">Клик!</button>
+
+    <!-- Cookie Button -->
+    <div class="cookie-container">
+      <div id="click-cookie" class="cookie">
+        <span class="cookie-text">КЛИК!</span>
+      </div>
+    </div>
+    
+    <!-- Floating numbers container -->
+    <div id="floating-numbers"></div>
   </div>
   <script src="/static/main.js"></script>
 </body>

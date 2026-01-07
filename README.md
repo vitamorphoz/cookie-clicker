@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# cookie-clicker
-=======
 # Cookie Clicker (FastAPI)
 
 Игровая версия с анимированной печенькой, всплывающими +1, показом кликов/сек и лучшим результатом за сессию.
@@ -12,4 +9,4 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload
 # Открыть http://127.0.0.1:8000
->>>>>>> 02fbd99 (Add cookie clicker game)
+```
