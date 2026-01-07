@@ -23,23 +23,23 @@ user_stats: Dict[str, UserStats] = {}
 SESSION_COOKIE = "cc_session"
 
 
-def get_session_id(request: Request) -> str:
+def get_session_id(request: Request) -> tuple[str, bool]:
     session_id = request.cookies.get(SESSION_COOKIE)
     if session_id and session_id in user_stats:
-        return session_id
+        return session_id, False
     new_id = uuid.uuid4().hex
     user_stats[new_id] = UserStats()
-    return new_id
+    return new_id, True
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    session_id = get_session_id(request)
+    session_id, is_new = get_session_id(request)
     response = templates.TemplateResponse(
         "index.html",
         {"request": request, "score": user_stats[session_id].score},
     )
-    if not request.cookies.get(SESSION_COOKIE):
+    if is_new or not request.cookies.get(SESSION_COOKIE):
         response.set_cookie(
             key=SESSION_COOKIE,
             value=session_id,
@@ -51,7 +51,7 @@ async def index(request: Request):
 
 @app.post("/click", response_class=JSONResponse)
 async def click(request: Request):
-    session_id = get_session_id(request)
+    session_id, is_new = get_session_id(request)
     stats = user_stats[session_id]
     stats.score += 1
     
@@ -70,17 +70,25 @@ async def click(request: Request):
     time_window = min(10, max(1, current_time - stats.start_time))
     cps = len(stats.click_history) / time_window
     
-    return {
+    response = JSONResponse({
         "score": stats.score,
         "best_score": stats.best_score,
         "cps": round(cps, 1),
         "session_time": int(current_time - stats.start_time)
-    }
+    })
+    if is_new or not request.cookies.get(SESSION_COOKIE):
+        response.set_cookie(
+            key=SESSION_COOKIE,
+            value=session_id,
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 @app.get("/state", response_class=JSONResponse)
 async def state(request: Request):
-    session_id = get_session_id(request)
+    session_id, is_new = get_session_id(request)
     stats = user_stats[session_id]
     current_time = time.time()
     
@@ -89,12 +97,20 @@ async def state(request: Request):
     time_window = min(10, max(1, current_time - stats.start_time))
     cps = len(stats.click_history) / time_window if stats.click_history else 0
     
-    return {
+    response = JSONResponse({
         "score": stats.score,
         "best_score": stats.best_score,
         "cps": round(cps, 1),
         "session_time": int(current_time - stats.start_time)
-    }
+    })
+    if is_new or not request.cookies.get(SESSION_COOKIE):
+        response.set_cookie(
+            key=SESSION_COOKIE,
+            value=session_id,
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
