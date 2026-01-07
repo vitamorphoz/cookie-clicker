@@ -1,5 +1,7 @@
 import uuid
+import time
 from typing import Dict
+from dataclasses import dataclass, field
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -9,16 +11,24 @@ from fastapi.templating import Jinja2Templates
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-user_scores: Dict[str, int] = {}
+@dataclass
+class UserStats:
+    score: int = 0
+    best_score: int = 0
+    start_time: float = field(default_factory=time.time)
+    last_click_time: float = field(default_factory=time.time)
+    click_history: list = field(default_factory=list)
+
+user_stats: Dict[str, UserStats] = {}
 SESSION_COOKIE = "cc_session"
 
 
 def get_session_id(request: Request) -> str:
     session_id = request.cookies.get(SESSION_COOKIE)
-    if session_id and session_id in user_scores:
+    if session_id and session_id in user_stats:
         return session_id
     new_id = uuid.uuid4().hex
-    user_scores[new_id] = 0
+    user_stats[new_id] = UserStats()
     return new_id
 
 
@@ -27,7 +37,7 @@ async def index(request: Request):
     session_id = get_session_id(request)
     response = templates.TemplateResponse(
         "index.html",
-        {"request": request, "score": user_scores[session_id]},
+        {"request": request, "score": user_stats[session_id].score},
     )
     if not request.cookies.get(SESSION_COOKIE):
         response.set_cookie(
@@ -42,14 +52,49 @@ async def index(request: Request):
 @app.post("/click", response_class=JSONResponse)
 async def click(request: Request):
     session_id = get_session_id(request)
-    user_scores[session_id] += 1
-    return {"score": user_scores[session_id]}
+    stats = user_stats[session_id]
+    stats.score += 1
+    
+    # Update best score
+    if stats.score > stats.best_score:
+        stats.best_score = stats.score
+    
+    # Track click for CPS calculation
+    current_time = time.time()
+    stats.click_history.append(current_time)
+    
+    # Keep only last 10 seconds of clicks
+    stats.click_history = [t for t in stats.click_history if current_time - t <= 10]
+    
+    # Calculate clicks per second (based on last 10 seconds or session duration, whichever is smaller)
+    time_window = min(10, max(1, current_time - stats.start_time))
+    cps = len(stats.click_history) / time_window
+    
+    return {
+        "score": stats.score,
+        "best_score": stats.best_score,
+        "cps": round(cps, 1),
+        "session_time": int(current_time - stats.start_time)
+    }
 
 
 @app.get("/state", response_class=JSONResponse)
 async def state(request: Request):
     session_id = get_session_id(request)
-    return {"score": user_scores[session_id]}
+    stats = user_stats[session_id]
+    current_time = time.time()
+    
+    # Calculate CPS from history (based on last 10 seconds or session duration, whichever is smaller)
+    stats.click_history = [t for t in stats.click_history if current_time - t <= 10]
+    time_window = min(10, max(1, current_time - stats.start_time))
+    cps = len(stats.click_history) / time_window if stats.click_history else 0
+    
+    return {
+        "score": stats.score,
+        "best_score": stats.best_score,
+        "cps": round(cps, 1),
+        "session_time": int(current_time - stats.start_time)
+    }
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
