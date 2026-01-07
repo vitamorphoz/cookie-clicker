@@ -1,0 +1,26 @@
+# SSH Keys - never commit private keys!
+*.pem
+*.key
+id_rsa
+id_ed25519
+*.ppk
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Editor directories
+.vscode/
+.idea/
+
+# Node modules (if used in future)
+node_modules/
+npm-debug.log*
+
+# Build outputs
+dist/
+build/
+*.log
