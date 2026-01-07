@@ -21,7 +21,7 @@ function updateStats(data) {
 // Fetch current state
 async function fetchState() {
   try {
-    const res = await fetch("/state");
+    const res = await fetch("/state", { credentials: "include" });
     const data = await res.json();
     updateStats(data);
   } catch (error) {
@@ -71,7 +71,7 @@ function createParticles(x, y) {
 // Handle click
 async function click(event) {
   try {
-    const res = await fetch("/click", { method: "POST" });
+    const res = await fetch("/click", { method: "POST", credentials: "include" });
     const data = await res.json();
     updateStats(data);
     
