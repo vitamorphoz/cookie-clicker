@@ -16,6 +16,22 @@ templates = Jinja2Templates(directory="templates")
 # Path to store best scores
 BEST_SCORES_FILE = Path("best_scores.json")
 
+# In-memory cache of best scores - load at module initialization
+_best_scores_cache: Dict[str, int] = {}
+
+def _load_initial_scores():
+    """Load best scores from file at module initialization"""
+    global _best_scores_cache
+    if BEST_SCORES_FILE.exists():
+        try:
+            with open(BEST_SCORES_FILE, 'r') as f:
+                _best_scores_cache = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            _best_scores_cache = {}
+
+# Load scores when module is imported
+_load_initial_scores()
+
 @dataclass
 class UserStats:
     score: int = 0
@@ -29,23 +45,16 @@ SESSION_COOKIE = "cc_session"
 
 
 def load_best_scores() -> Dict[str, int]:
-    """Load best scores from file"""
-    if BEST_SCORES_FILE.exists():
-        try:
-            with open(BEST_SCORES_FILE, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return {}
-    return {}
+    """Return the cached best scores"""
+    return _best_scores_cache
 
 
 def save_best_score(session_id: str, score: int) -> None:
-    """Save best score to file"""
-    best_scores = load_best_scores()
-    best_scores[session_id] = score
+    """Save best score to file and update cache"""
+    _best_scores_cache[session_id] = score
     try:
         with open(BEST_SCORES_FILE, 'w') as f:
-            json.dump(best_scores, f)
+            json.dump(_best_scores_cache, f)
     except IOError:
         pass  # Fail silently if we can't write
 
@@ -63,9 +72,8 @@ def get_session_id(request: Request) -> tuple[str, bool]:
     if session_id in user_stats:
         return session_id, is_new
     
-    # Create new session stats, preserving best score from persistent storage
-    best_scores = load_best_scores()
-    best_score = best_scores.get(session_id, 0)
+    # Create new session stats, preserving best score from cache
+    best_score = _best_scores_cache.get(session_id, 0)
     
     user_stats[session_id] = UserStats(best_score=best_score)
     return session_id, is_new
@@ -73,8 +81,7 @@ def get_session_id(request: Request) -> tuple[str, bool]:
 
 def reset_session_for_page_load(session_id: str) -> None:
     """Reset session stats when page is loaded/reloaded, but keep best score"""
-    best_scores = load_best_scores()
-    best_score = best_scores.get(session_id, 0)
+    best_score = _best_scores_cache.get(session_id, 0)
     user_stats[session_id] = UserStats(best_score=best_score)
 
 
