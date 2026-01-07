@@ -107,6 +107,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Fetch initial state
   fetchState();
   
-  // Update state periodically
-  setInterval(fetchState, 5000);
+  // Update state every second to keep game time current
+  setInterval(fetchState, 1000);
 });
