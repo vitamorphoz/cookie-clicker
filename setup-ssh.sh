@@ -97,7 +97,8 @@ read -p "Press Enter after you've added the key to GitHub..."
 
 echo ""
 echo "🧪 Testing SSH connection to GitHub..."
-if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+SSH_TEST_OUTPUT=$(ssh -T git@github.com 2>&1)
+if echo "$SSH_TEST_OUTPUT" | grep -q "You've successfully authenticated"; then
     echo "✅ SSH connection successful!"
 else
     echo "⚠️  Could not verify connection. Please check your GitHub settings."
@@ -106,13 +107,20 @@ fi
 
 echo ""
 echo "🔄 Switching repository remote from HTTPS to SSH..."
-if git remote get-url origin | grep -q "https://"; then
-    git remote set-url origin git@github.com:vitamorphoz/cookie-clicker.git
+CURRENT_URL=$(git remote get-url origin 2>/dev/null || echo "")
+if [ -n "$CURRENT_URL" ] && echo "$CURRENT_URL" | grep -q "https://github.com/"; then
+    # Extract repository path from HTTPS URL
+    REPO_PATH=$(echo "$CURRENT_URL" | sed 's|https://github.com/||' | sed 's|\.git$||')
+    SSH_URL="git@github.com:${REPO_PATH}.git"
+    git remote set-url origin "$SSH_URL"
     echo "✅ Remote URL updated to SSH!"
     echo ""
     git remote -v
+elif [ -n "$CURRENT_URL" ] && echo "$CURRENT_URL" | grep -q "git@github.com:"; then
+    echo "ℹ️  Repository is already using SSH."
+    git remote -v
 else
-    echo "ℹ️  Repository is already using SSH or non-standard remote."
+    echo "ℹ️  Could not determine repository URL or non-GitHub remote."
     git remote -v
 fi
 
