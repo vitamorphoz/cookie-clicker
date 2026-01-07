@@ -67,7 +67,8 @@ async def click(request: Request):
     stats.click_history = [t for t in stats.click_history if current_time - t <= 10]
     
     # Calculate clicks per second
-    cps = len(stats.click_history) / min(10, current_time - stats.start_time)
+    time_elapsed = max(1, current_time - stats.start_time)
+    cps = len(stats.click_history) / min(10, time_elapsed)
     
     return {
         "score": stats.score,
@@ -85,7 +86,8 @@ async def state(request: Request):
     
     # Calculate CPS from history
     stats.click_history = [t for t in stats.click_history if current_time - t <= 10]
-    cps = len(stats.click_history) / min(10, current_time - stats.start_time) if stats.click_history else 0
+    time_elapsed = max(1, current_time - stats.start_time)
+    cps = len(stats.click_history) / min(10, time_elapsed) if stats.click_history else 0
     
     return {
         "score": stats.score,
