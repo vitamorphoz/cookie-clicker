@@ -44,11 +44,6 @@ user_stats: Dict[str, UserStats] = {}
 SESSION_COOKIE = "cc_session"
 
 
-def load_best_scores() -> Dict[str, int]:
-    """Return the cached best scores"""
-    return _best_scores_cache
-
-
 def save_best_score(session_id: str, score: int) -> None:
     """Save best score to file and update cache"""
     _best_scores_cache[session_id] = score
@@ -61,16 +56,18 @@ def save_best_score(session_id: str, score: int) -> None:
 
 def get_session_id(request: Request) -> tuple[str, bool]:
     session_id = request.cookies.get(SESSION_COOKIE)
-    is_new = False
     
     # If no cookie, create new session ID
     if not session_id:
         session_id = uuid.uuid4().hex
         is_new = True
+    else:
+        # Has cookie, check if session exists in memory
+        is_new = session_id not in user_stats
     
     # Return existing session if it exists
     if session_id in user_stats:
-        return session_id, is_new
+        return session_id, False
     
     # Create new session stats, preserving best score from cache
     best_score = _best_scores_cache.get(session_id, 0)
