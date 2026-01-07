@@ -32,13 +32,7 @@ def get_session_id(request: Request) -> tuple[str, bool]:
     return new_id, True
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    session_id, is_new = get_session_id(request)
-    response = templates.TemplateResponse(
-        "index.html",
-        {"request": request, "score": user_stats[session_id].score},
-    )
+def ensure_session_cookie(response: JSONResponse | HTMLResponse, request: Request, session_id: str, is_new: bool) -> None:
     if is_new or not request.cookies.get(SESSION_COOKIE):
         response.set_cookie(
             key=SESSION_COOKIE,
@@ -46,6 +40,16 @@ async def index(request: Request):
             httponly=True,
             samesite="lax",
         )
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    session_id, is_new = get_session_id(request)
+    response = templates.TemplateResponse(
+        "index.html",
+        {"request": request, "score": user_stats[session_id].score},
+    )
+    ensure_session_cookie(response, request, session_id, is_new)
     return response
 
 
@@ -76,13 +80,7 @@ async def click(request: Request):
         "cps": round(cps, 1),
         "session_time": int(current_time - stats.start_time)
     })
-    if is_new or not request.cookies.get(SESSION_COOKIE):
-        response.set_cookie(
-            key=SESSION_COOKIE,
-            value=session_id,
-            httponly=True,
-            samesite="lax",
-        )
+    ensure_session_cookie(response, request, session_id, is_new)
     return response
 
 
@@ -103,13 +101,7 @@ async def state(request: Request):
         "cps": round(cps, 1),
         "session_time": int(current_time - stats.start_time)
     })
-    if is_new or not request.cookies.get(SESSION_COOKIE):
-        response.set_cookie(
-            key=SESSION_COOKIE,
-            value=session_id,
-            httponly=True,
-            samesite="lax",
-        )
+    ensure_session_cookie(response, request, session_id, is_new)
     return response
 
 
